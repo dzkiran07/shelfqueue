@@ -1,0 +1,25 @@
+{
+  "name": "shelfqueue-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ShelfQueue API (Express) — books, loans, waitlist, auth",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mongoose": "^8.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "jest": "^29.7.0",
+    "eslint": "^9.9.0"
+  }
+}

@@ -1,0 +1,67 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: shelfqueue-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - shelfqueue-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: shelfqueue-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - shelfqueue-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shelfqueue-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_URI=mongodb://mongo:27017/shelfqueue
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - shelfqueue-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shelfqueue-frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - shelfqueue-net
+
+networks:
+  shelfqueue-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
