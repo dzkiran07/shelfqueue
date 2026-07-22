@@ -4,7 +4,7 @@ services:
     container_name: shelfqueue-mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo-data:/data/db
     networks:

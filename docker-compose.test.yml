@@ -1,0 +1,9 @@
+services:
+  backend:
+    environment:
+      # Skips CAPTCHA verification (src/services/captchaService.js) so a
+      # Burp session driving the login/register forms doesn't need real
+      # hCaptcha credentials. Rate limiting and account lockout stay ON —
+      # this is not a "disable security for testing" switch, only the
+      # third-party CAPTCHA dependency that has no test-mode of its own.
+      - NODE_ENV=test
