@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  backend:
+    name: Backend — lint, test, audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # mongodb-memory-server (used by the Jest suite instead of a real Mongo
+      # service) downloads a mongod binary on first use — caching it keeps
+      # every run after the first one fast instead of re-downloading ~100MB.
+      - name: Cache mongodb-memory-server binary
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: ${{ runner.os }}-mongodb-binaries-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Test
+        working-directory: backend
+        run: npm test
+
+      # No real Mongo/Redis service containers are needed here: the Jest
+      # suite spins up its own in-memory Mongo (mongodb-memory-server) and
+      # stubs the Redis client directly (see tests/*.test.js).
+      - name: Audit (fail on high/critical)
+        working-directory: backend
+        run: npm audit --audit-level=high
+
+  frontend:
+    name: Frontend — lint, test, build, audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Test (axe-core accessibility scan + unit tests)
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Audit (fail on high/critical)
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  docker-build:
+    name: Docker — build images
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: shelfqueue-backend:ci
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: shelfqueue-frontend:ci
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  # --- Optional: automated DAST regression scan ---
+  #
+  # This is deliberately kept alongside the project's manual Burp Suite
+  # Professional pentest (see Phases 33-37 / docs/pentest), not as a
+  # replacement for it. Burp Pro is an interactive tool built for a human
+  # driving a deliberate, hands-on assessment — it has no supported way to
+  # run headless in CI. ZAP does have an official GitHub Action for exactly
+  # that, so it's used here purely to catch obvious regressions
+  # (missing security headers, newly-exposed endpoints, etc.) on every push,
+  # continuously and unattended — a different job with a different purpose
+  # from the manual pentest, not a stand-in for it.
+  #
+  # Baseline scans are passive/best-effort and prone to noisy findings on an
+  # app still under active development, so this job reports results as a
+  # build artifact and a job-summary comment rather than failing the
+  # pipeline outright (fail_action: false). Flip that to `true` once the
+  # baseline has been tuned (see .zap/rules.tsv) if you want it to gate merges.
+  zap-baseline:
+    name: ZAP baseline scan (optional, non-blocking)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Provision env files for a local compose run
+        run: |
+          cp backend/.env.example backend/.env
+          cp frontend/.env.example frontend/.env
+
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for the backend to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/api/csrf-token -o /dev/null; then
+              echo "Backend is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not become ready in time"
+          docker compose logs
+          exit 1
+
+      - name: ZAP baseline scan against the frontend
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: 'http://localhost:5173'
+          fail_action: false
+          cmd_options: '-a'
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
