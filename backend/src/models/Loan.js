@@ -14,6 +14,7 @@ const loanSchema = new Schema(
       enum: [
         'requested',
         'approved',
+        'rejected',
         'checked_out',
         'returned',
         'overdue',
