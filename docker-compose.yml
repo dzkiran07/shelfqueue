@@ -38,6 +38,11 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      # mkcert-issued local HTTPS cert (see docs/https-local-dev.md). The
+      # host ./certs dir is gitignored and may not exist yet on a fresh
+      # clone — Docker creates it empty in that case, and server.js falls
+      # back to plain HTTP when the expected files aren't found inside it.
+      - ./certs:/certs:ro
     networks:
       - shelfqueue-net
 
@@ -56,6 +61,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - ./certs:/certs:ro
     networks:
       - shelfqueue-net
 

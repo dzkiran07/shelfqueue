@@ -7,3 +7,18 @@ services:
       # this is not a "disable security for testing" switch, only the
       # third-party CAPTCHA dependency that has no test-mode of its own.
       - NODE_ENV=test
+      # 'shelfqueue.test' (not 'localhost') so the app is reachable from
+      # the separate Kali pentest VM — 'localhost' inside that VM means
+      # the VM itself, not this host. Google OAuth deliberately does NOT
+      # work under this profile: Google's console only accepts 'localhost'
+      # or a real public-TLD domain as a redirect URI, and '.test' is
+      # neither — that's a Google-side restriction, not something fixable
+      # here. Password login, MFA, and passkeys (re-registered under this
+      # RP ID) all work fine through Burp; Google OAuth simply isn't part
+      # of what's testable in this profile.
+      - FRONTEND_ORIGIN=https://shelfqueue.test:5173
+      - BACKEND_ORIGIN=https://shelfqueue.test:5000
+      - WEBAUTHN_RP_ID=shelfqueue.test
+  frontend:
+    environment:
+      - VITE_API_BASE_URL=https://shelfqueue.test:5000
