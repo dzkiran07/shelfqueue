@@ -14,6 +14,11 @@ const auditLogSchema = new Schema(
     ip: { type: String, trim: true },
     userAgent: { type: String, trim: true },
     timestamp: { type: Date, default: Date.now, required: true },
+    // Optional structured context (e.g. { previousRole, newRole } for a
+    // role change) — an audit entry that only says "something happened"
+    // without saying what changed is weak evidence. Still subject to the
+    // same rule above: never put secrets in here either.
+    metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: false }
 );
