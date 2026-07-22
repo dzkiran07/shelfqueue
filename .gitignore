@@ -1,31 +1,70 @@
-# Dependencies
+# --- Dependencies ---
 node_modules/
 backend/node_modules/
 frontend/node_modules/
 
-# Environment
+# --- Environment / secrets ---
+# .env.example files ARE tracked (they hold placeholders only) — everything
+# else that could hold real secrets is not.
 .env
+.env.local
+.env.*.local
 backend/.env
 frontend/.env
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+credentials.json
+service-account*.json
 
-# Build output
+# --- Build output ---
 dist/
 build/
 backend/dist/
 frontend/dist/
+frontend/.vite/
 
-# Logs
+# --- Logs ---
 *.log
 npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+backend/logs/
 
-# Editor/OS
+# --- Editor / OS ---
 .vscode/
 .idea/
+*.suo
+*.user
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Test/coverage
+# --- Test / coverage ---
 coverage/
+.nyc_output/
 
-# Docker
+# --- Caches ---
+.eslintcache
+.cache/
+
+# --- Docker ---
 docker-compose.override.yml
+
+# --- Database dumps / local data ---
+*.dump
+mongo-data/
+dump/
+
+# --- Pentest tooling (Phase 33+) ---
+# Burp Suite project files can contain captured session cookies/tokens —
+# never commit these. The findings write-ups in docs/pentest/ are tracked;
+# raw proxy history/screenshots working folder is not.
+*.burp
+evidence/raw/
+
+# --- Temp files ---
+*.tmp
+tmp/
