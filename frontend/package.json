@@ -8,17 +8,29 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@hcaptcha/react-hcaptcha": "^2.0.2",
+    "@simplewebauthn/browser": "^13.3.0",
+    "axios": "^1.7.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0",
-    "axios": "^1.7.4"
+    "react-router-dom": "^6.26.0"
   },
   "devDependencies": {
-    "vite": "^5.4.0",
+    "@eslint/js": "^9.39.5",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^9.9.0"
+    "eslint": "^9.9.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^14.0.0",
+    "jest-axe": "^10.0.0",
+    "jsdom": "^29.1.1",
+    "vite": "^7.1.12",
+    "vitest": "^4.1.10"
   }
 }
