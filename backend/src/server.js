@@ -1,9 +1,24 @@
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
 const env = require('./config/env');
 const connectDB = require('./config/db');
 const { connectRedis } = require('./config/redis');
 const logger = require('./utils/logger');
 const { sweepExpiredOffers } = require('./services/waitlistService');
 const { sweepOverdueLoans } = require('./services/loanService');
+
+// Local HTTPS via mkcert (see docs/https-local-dev.md): only enabled when
+// both files actually exist on disk, so this degrades to plain HTTP
+// automatically anywhere the certs/ volume isn't mounted — CI's ZAP job,
+// `npm run dev` outside Docker, a fresh clone before mkcert has run, etc.
+function loadTlsOptions() {
+  if (!env.HTTPS_ENABLED) return null;
+  return {
+    cert: fs.readFileSync(env.SSL_CERT_PATH),
+    key: fs.readFileSync(env.SSL_KEY_PATH),
+  };
+}
 
 async function start() {
   await connectDB();
@@ -16,8 +31,12 @@ async function start() {
   // ClientClosedError because the client's socket doesn't exist yet.
   const app = require('./app');
 
-  app.listen(env.PORT, () => {
-    logger.info(`ShelfQueue API listening on port ${env.PORT} (${env.NODE_ENV})`);
+  const tlsOptions = loadTlsOptions();
+  const server = tlsOptions ? https.createServer(tlsOptions, app) : http.createServer(app);
+
+  server.listen(env.PORT, () => {
+    const scheme = tlsOptions ? 'https' : 'http';
+    logger.info(`ShelfQueue API listening on ${scheme}://0.0.0.0:${env.PORT} (${env.NODE_ENV})`);
   });
 
   // Coursework-scale scheduled job: a simple interval rather than a real

@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 require('dotenv').config();
 
 // Fail fast on missing config rather than limping along with `undefined`
@@ -17,6 +19,24 @@ const env = {
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
   // This API's own origin — needed to build an absolute OAuth callback URL.
   BACKEND_ORIGIN: process.env.BACKEND_ORIGIN || 'http://localhost:5000',
+
+  // Local HTTPS (mkcert-issued cert/key). Both must be set and exist on
+  // disk for server.js to switch from http to https — absent (e.g. in CI,
+  // which never mounts a certs/ volume), it falls straight back to plain
+  // HTTP exactly as before this was added.
+  SSL_CERT_PATH: process.env.SSL_CERT_PATH || null,
+  SSL_KEY_PATH: process.env.SSL_KEY_PATH || null,
+  // Computed once here (not re-checked per-request) so server.js and
+  // tokenService's cookie `secure` flag can't disagree with each other
+  // about whether this process is actually serving TLS.
+  get HTTPS_ENABLED() {
+    return Boolean(
+      this.SSL_CERT_PATH &&
+        this.SSL_KEY_PATH &&
+        fs.existsSync(this.SSL_CERT_PATH) &&
+        fs.existsSync(this.SSL_KEY_PATH)
+    );
+  },
 
   DB_URI: process.env.DB_URI || 'mongodb://localhost:27017/shelfqueue',
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
