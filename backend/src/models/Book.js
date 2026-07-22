@@ -20,6 +20,11 @@ const bookSchema = new Schema(
       required: true,
     },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    // Atomically incremented (Phase 19) to hand out unique, strictly
+    // increasing waitlist queue positions per book without a read-then-
+    // write race. Monotonic only — gaps from cancelled entries are fine,
+    // since only relative order matters, not contiguity.
+    waitlistCounter: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
