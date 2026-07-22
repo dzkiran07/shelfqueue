@@ -278,10 +278,13 @@ function baseCookieOptions() {
   return {
     httpOnly: true,
     sameSite: 'strict',
-    // Off for local HTTP dev/testing/demo (Secure cookies require HTTPS to
-    // be sent at all); on automatically the moment this runs behind real
-    // HTTPS in production, per NODE_ENV.
-    secure: process.env.NODE_ENV === 'production',
+    // Secure cookies are only ever sent over an actual TLS connection, so
+    // this must track whether *this* process is really serving HTTPS
+    // (env.HTTPS_ENABLED — mkcert certs mounted for local dev/pentest) —
+    // not just NODE_ENV, since plain `production` alone would send Secure
+    // cookies from a dev server that never gained TLS, silently dropping
+    // them at the browser instead of setting them.
+    secure: env.NODE_ENV === 'production' || env.HTTPS_ENABLED,
     path: '/',
   };
 }
